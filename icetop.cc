@@ -2,7 +2,7 @@
  * icetop.cc
  * Copyright (C) 2016 Adrian Perez <aperez@igalia.com>
  *
- * Distributed under terms of the MIT license.
+ * Distributed under terms of the GPLv2 license.
  */
 
 extern "C" {
