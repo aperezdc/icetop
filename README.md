@@ -1,0 +1,32 @@
+icetop
+======
+
+This is a simple, console-only monitor for
+[Icecream](https://github.com/icecc/icecream). Also, I am using it as a
+playground for [libdill](http://libdill.org), testing C++14 features
+(and C++1z, when compilers implementing it), and experimenting with text
+console output.
+
+
+Building
+--------
+
+You will need the development headers for Icecream and
+[libdill](http://libdill.org) installed:
+
+```sh
+./configure && make
+```
+
+Or, if you are using the sources from Git:
+
+```sh
+autoreconf && ./configure && make
+```
+
+
+License
+-------
+
+`icetop` is distributed under the terms of the GPLv2 license. See
+[COPYING](COPYING) for the complete text of the license.
