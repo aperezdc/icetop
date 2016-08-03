@@ -1,0 +1,32 @@
+srcdir = @srcdir@
+VPATH  = @srcdir@
+
+CXX = @CXX@
+LD  = @CXX@
+
+CPPFLAGS = @CPPFLAGS@ @DEFS@
+CXXFLAGS = @ICETOP_CFLAGS@ @CXXFLAGS@ -std=c++14
+LDLIBS   = @ICETOP_LIBS@ @LIBS@
+LDFLAGS  = @LDFLAGS@
+
+
+all: icetop
+
+icetop: icetop.o
+	$(LD) $(LDFLAGS) -o $@ icetop.o $(LDLIBS)
+
+
+clean:
+	$(RM) icetop.o icetop
+
+
+DESTDIR ?=
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+
+
+install: icetop
+	install -Dm755 icetop '$(DESTDIR)$(bindir)/icetop'
+
+.PHONY: install
