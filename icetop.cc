@@ -82,7 +82,7 @@ public:
     host_info* check_host(unsigned int id, const host_stats_map& stats) {
         auto item = host_infos.find(id);
         if (item == host_infos.end()) {
-            item = host_infos.emplace(id, std::move(host_info(id))).first;
+            item = host_infos.emplace(id, host_info(id)).first;
         }
         item->second.update_from_stats_map(stats);
         return &item->second;
@@ -288,7 +288,7 @@ parse_stats(const std::string& input)
     while (std::getline(stream, key, ':') && std::getline(stream, value)) {
         stats.emplace(key, value);
     }
-    return std::move(stats);
+    return stats;
 }
 
 MESSAGE_HANDLER (MON_STATS, MonStatsMsg, m)
