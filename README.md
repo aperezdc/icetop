@@ -24,6 +24,20 @@ Or, if you are using the sources from Git:
 autoreconf && ./configure && make
 ```
 
+If your system does not have pacakages for `libdill`, you can build it
+yourself and link it statically in `icetop`:
+
+```sh
+# Build libdill locally
+wget -O - http://libdill.org/libdill-0.5-beta.tar.gz | tar -xzf -
+pushd libdill-0.5-beta
+./configure --prefix=$(pwd)/../libdill --enable-static --disable-shared
+make install
+popd
+# Build icetop using the local libdill build
+./configure PKG_CONFIG_PATH=$(pwd)/libdill/lib/pkgconfig
+make
+```
 
 License
 -------
