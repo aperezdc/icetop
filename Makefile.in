@@ -9,15 +9,16 @@ CXXFLAGS = @ICETOP_CFLAGS@ @CXXFLAGS@ -std=c++14 -Wall
 LDLIBS   = @ICETOP_LIBS@ @LIBS@
 LDFLAGS  = @LDFLAGS@
 
+ALL_OBJS = icetop.o util/getenv.o
 
 all: icetop
 
-icetop: icetop.o
-	$(LD) $(LDFLAGS) -o $@ icetop.o $(LDLIBS)
+icetop: $(ALL_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(ALL_OBJS) $(LDLIBS)
 
 
 clean:
-	$(RM) icetop.o icetop
+	$(RM) $(ALL_OBJS) icetop
 
 
 DESTDIR ?=

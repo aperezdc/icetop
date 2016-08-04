@@ -5,6 +5,8 @@
  * Distributed under terms of the GPLv2 license.
  */
 
+#include "util/getenv.hh"
+
 extern "C" {
 #include <libdill.h>
 }
@@ -182,8 +184,9 @@ public:
             } else {
                 names.push_back("ICECREAM");
             }
-
-            // TODO: Check for environment variable USE_SCHEDULER and use it.
+            if (auto env_scheduler = util::getenv("USE_SCHEDULER")) {
+                names.push_back(env_scheduler.value());
+            }
 
             for (auto name: names) {
                 if (!discover || discover->timed_out()) {
