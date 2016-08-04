@@ -171,6 +171,15 @@ public:
         ONLINE,
     };
 
+    icecc_monitor(host_updated_func on_host_updated_ = nullptr,
+                  job_updated_func on_job_updated_ = nullptr)
+        : on_host_updated(on_host_updated_)
+        , on_job_updated(on_job_updated_)
+        , state(OFFLINE)
+    { }
+
+
+
     coroutine void check_scheduler(bool deleteit=false) {
         if (deleteit) {
             discover = nullptr;
@@ -225,16 +234,16 @@ public:
 
     const host_info* find_host(unsigned int id) const { return team.find(id); }
 
-    host_updated_func              on_host_updated;
-    job_updated_func               on_job_updated;
     std::string                    network_name;
     std::string                    scheduler_name;
     std::unique_ptr<MsgChannel>    scheduler;
 
 private:
+    host_updated_func              on_host_updated;
+    job_updated_func               on_job_updated;
+    monitor_state                  state;
     team_info                      team;
     job_info_map                   jobs;
-    monitor_state                  state;
     std::unique_ptr<DiscoverSched> discover;
 
     bool _handle_activity();
@@ -372,53 +381,44 @@ MESSAGE_HANDLER (MON_JOB_DONE, MonJobDoneMsg, m)
 }
 
 
-static void show_job(const job_info& job)
-{
-    if (job.state != job_info::FINISHED && job.state != job_info::FAILED)
-        return;
-    const char *server = nullptr;
-    const char *client = "?";
-    if (job.server_id) {
-        auto host = job.server();
-        if (host) server = host->name.c_str();
-    }
-    if (job.client_id) {
-        auto host = job.client();
-        if (host) client = host->name.c_str();
-    }
-    if (server) {
-        printf("Job %u [%s->%s] '%s' %s\n",
-               job.id,
-               client,
-               server,
-               job.filename.c_str(),
-               job.state_string());
-    } else {
-        printf("Job %u [%s] '%s' %s\n",
-               job.id,
-               client,
-               job.filename.c_str(),
-               job.state_string());
-    }
-}
-
-static void show_host(const host_info& host)
-{
-    printf("Host %u '%s' (%s, load %i, max %u) is %s\n",
-           host.id,
-           host.name.c_str(),
-           host.platform.c_str(),
-           host.load,
-           host.max_jobs,
-           host.offline ? "offline" : "online");
-}
-
-
 int main(int argc, char **argv)
 {
-    icecc_monitor monitor;
-    monitor.on_host_updated = show_host;
-    monitor.on_job_updated = show_job;
+    icecc_monitor monitor([](const host_info& host) {
+        printf("Host %u '%s' (%s, load %i, max %u) is %s\n",
+               host.id,
+               host.name.c_str(),
+               host.platform.c_str(),
+               host.load,
+               host.max_jobs,
+               host.offline ? "offline" : "online");
+    }, [](const job_info& job) {
+        if (job.state != job_info::FINISHED && job.state != job_info::FAILED)
+            return;
+        const char *server = nullptr;
+        const char *client = "?";
+        if (job.server_id) {
+            auto host = job.server();
+            if (host) server = host->name.c_str();
+        }
+        if (job.client_id) {
+            auto host = job.client();
+            if (host) client = host->name.c_str();
+        }
+        if (server) {
+            printf("Job %u [%s->%s] '%s' %s\n",
+                   job.id,
+                   client,
+                   server,
+                   job.filename.c_str(),
+                   job.state_string());
+        } else {
+            printf("Job %u [%s] '%s' %s\n",
+                   job.id,
+                   client,
+                   job.filename.c_str(),
+                   job.state_string());
+        }
+    });
 
     printf("Waiting for scheduler...\n");
     go(monitor.check_scheduler());
