@@ -168,6 +168,7 @@ public:
 
     enum monitor_state {
         OFFLINE,
+        ONLINE,
     };
 
     coroutine void check_scheduler(bool deleteit=false) {
@@ -194,6 +195,7 @@ public:
                 }
                 scheduler.reset(discover->try_get_scheduler());
                 if (scheduler) {
+                    state = ONLINE;
                     network_name = discover->networkName();
                     scheduler_name = discover->schedulerName();
                     scheduler->setBulkTransfer();
