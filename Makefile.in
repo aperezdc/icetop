@@ -1,8 +1,8 @@
-srcdir = @srcdir@
-VPATH  = @srcdir@
+srcdir   = @srcdir@
+VPATH    = @srcdir@
 
-CXX = @CXX@
-LD  = @CXX@
+CXX      = @CXX@
+LD       = @CXX@
 
 CPPFLAGS = @CPPFLAGS@ @DEFS@
 CXXFLAGS = @ICETOP_CFLAGS@ @CXXFLAGS@ -std=c++14 -Wall
@@ -20,6 +20,10 @@ icetop: $(ALL_OBJS)
 clean:
 	$(RM) $(ALL_OBJS) icetop
 
+%.o: %.cc
+	mkdir -p $(dir $@)
+	$(COMPILE.C) $(OUTPUT_OPTION) $<
+
 
 DESTDIR ?=
 prefix = @prefix@
@@ -29,5 +33,8 @@ bindir = @bindir@
 
 install: icetop
 	install -Dm755 icetop '$(DESTDIR)$(bindir)/icetop'
+
+Makefile: Makefile.in
+	./config.status
 
 .PHONY: install
