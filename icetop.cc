@@ -394,6 +394,9 @@ int main(int argc, char **argv)
     }, [](const job_info& job) {
         if (job.state != job_info::FINISHED && job.state != job_info::FAILED)
             return;
+        // TODO: Investigate what causes jobs with empty filenames.
+        if (!job.filename.size())
+            return;
         const char *server = nullptr;
         const char *client = "?";
         if (job.server_id) {
