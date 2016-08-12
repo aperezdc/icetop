@@ -6,7 +6,7 @@ AC_PROG_CXX
 AC_LANG([C++])
 AC_LANG_WERROR
 
-PKG_CHECK_MODULES([ICETOP], [libdill icecc])
+PKG_CHECK_MODULES([ICETOP], [libdill icecc tickit])
 
 # Check wether icecc was compiled using the old C++ ABI, and
 # work around this to be able to still use C++11 (and later)
