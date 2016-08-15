@@ -386,7 +386,7 @@ MESSAGE_HANDLER (MON_JOB_DONE, MonJobDoneMsg, m)
 
 struct host_layout {
     static ti::pen line_pens[2];
-    static ti::pen busy_pen, warn_pen, okay_pen;
+    static ti::pen busy_pen, warn_pen, okay_pen, host_pen;
 
     host_layout(ti::window&& w, const host_info& host)
         : window(std::move(w)), hostname(host.name)
@@ -414,18 +414,19 @@ struct host_layout {
     void on_expose(ti::window::expose_event& ev) {
         ev.render.set_pen(line_pens[position() % 2]).clear();
         ev.render.at(0, 1) << platform;
-        ev.render.at(0, 9) << hostname;
-        ev.render.at(0, 30) << filename;
+        ev.render.at(0, 9).add_pen(host_pen) << hostname;
+        ev.render.at(0, 30).restore() << filename;
         if (ev.columns >= (11 + origin.size())) {
             // TODO: Do something better than erasing the line all over.
             auto col = ev.columns - 12 - origin.size();
             ev.render.clear(0, col, ev.columns - col);
-            ev.render.at(0, ++col) << origin;
+            ev.render.at(0, ++col).add_pen(host_pen) << origin;
             col = ev.columns - 11;
-            ev.render.clear(0, col,  ev.columns - col);
+            ev.render.clear(0, col,  ev.columns - col).restore();
             if (auto pen = state_pen())
-                ev.render.set_pen(*pen);
+                ev.render.add_pen(*pen);
             ev.render.at(0, ++col) << state_string;
+            ev.render.restore();
         }
     }
 
@@ -479,6 +480,7 @@ ti::pen host_layout::line_pens[2] = {
 ti::pen host_layout::busy_pen = { ti::pen::fg(3), ti::pen::bold };
 ti::pen host_layout::okay_pen = { ti::pen::fg(2), ti::pen::bold };
 ti::pen host_layout::warn_pen = { ti::pen::fg(1), ti::pen::bold };
+ti::pen host_layout::host_pen = { ti::pen::fg(7), ti::pen::bold };
 
 
 struct screen_layout {
