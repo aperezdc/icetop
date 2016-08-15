@@ -416,8 +416,13 @@ struct host_layout {
         ev.render.at(0, 9) << hostname;
         ev.render.at(0, 30) << filename;
         if (ev.columns >= (11 + origin.size())) {
-            ev.render.at(0, ev.columns - 11 - origin.size()) << origin;
-            ev.render.at(0, ev.columns - 10) << state_string;
+            // TODO: Do something better than erasing the line all over.
+            auto col = ev.columns - 12 - origin.size();
+            ev.render.clear(0, col, ev.columns - col);
+            ev.render.at(0, ++col) << origin;
+            col = ev.columns - 11;
+            ev.render.clear(0, col,  ev.columns - col);
+            ev.render.at(0, ++col) << state_string;
         }
     }
 
