@@ -428,7 +428,7 @@ struct host_layout {
     }
 
     void job_info_updated(const job_info& job) {
-        if (auto server = job.server()) {
+        if (job.server()) {
             origin = job.client()->name;
         } else {
             origin = "";
