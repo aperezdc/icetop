@@ -272,6 +272,12 @@ render_buffer& render_buffer::clear()
     return *this;
 }
 
+render_buffer& render_buffer::clear(uint line, uint col, uint cols)
+{
+    tickit_renderbuffer_erase_at(unwrap(), u2i(line), u2i(col), u2i(cols));
+    return *this;
+}
+
 render_buffer& render_buffer::save()
 {
     tickit_renderbuffer_save(unwrap());

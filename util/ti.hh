@@ -248,6 +248,7 @@ public:
     render_buffer& write(long long int);
 
     render_buffer& clear();
+    render_buffer& clear(uint line, uint col, uint columns);
 
     // Paint state.
     render_buffer& save();
