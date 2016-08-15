@@ -8,6 +8,12 @@ playground for [libdill](http://libdill.org), testing C++14 features
 console output.
 
 
+Screenshot
+----------
+
+![Screenshot](https://github.com/aperezdc/icetop/raw/master/icetop.png)
+
+
 Building
 --------
 
