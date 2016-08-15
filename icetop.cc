@@ -521,13 +521,13 @@ struct screen_layout {
         status.expose();
     }
 
+    ti::window root;
+    ti::window status;
+
     std::unordered_map<int, size_t> hostid_to_index;
     std::vector<std::unique_ptr<host_layout>> host_layouts;
     std::string statusline;
     time_t statustime;
-
-    ti::window root;
-    ti::window status;
 };
 
 
