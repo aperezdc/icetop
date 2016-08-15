@@ -302,6 +302,13 @@ render_buffer& render_buffer::set_pen(const pen& p)
     return *this;
 }
 
+render_buffer& render_buffer::add_pen(const pen& p)
+{
+    tickit_renderbuffer_savepen(unwrap());
+    tickit_renderbuffer_setpen(unwrap(), p.unwrap());
+    return *this;
+}
+
 render_buffer& render_buffer::at(uint line, uint col)
 {
     tickit_renderbuffer_goto(unwrap(), u2i(line), u2i(col));

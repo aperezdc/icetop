@@ -255,6 +255,7 @@ public:
     render_buffer& save_pen();
     render_buffer& restore();
     render_buffer& set_pen(const pen& p);
+    render_buffer& add_pen(const pen& p);
 
     // Movement.
     render_buffer& at(uint line, uint col);
