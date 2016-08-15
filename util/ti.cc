@@ -15,6 +15,41 @@ extern "C" {
 
 namespace ti {
 
+void _track(const char *tname, const char* ti_tname, void* ptr, const char *what)
+{
+    if (tickit_debug_enabled) {
+        tickit_debug_logf("Tp", "%s %p (%s)", what, ptr, ti_tname);
+    }
+}
+
+#if defined(TI_TRACE_POINTERS) && TI_TRACE_POINTERS
+void terminal::track_delete(TickitTerm* ptr)
+{
+    ti::_track("terminal", "TickitTerm", ptr, "free");
+    tickit_term_destroy(ptr);
+}
+void window::track_delete(TickitWindow* ptr)
+{
+    ti::_track("window", "TickitWindow", ptr, "free");
+    tickit_window_destroy(ptr);
+}
+void render_buffer::track_delete(TickitRenderBuffer* ptr)
+{
+    ti::_track("render_buffer", "TickitRenderBuffer", ptr, "free");
+    tickit_renderbuffer_destroy(ptr);
+}
+# define terminal_free       terminal::track_delete
+# define window_free         window::track_delete
+# define render_buffer_free  render_buffer::track_delete
+# define trace_pointer       ti::_track
+#else
+# define terminal_free       tickit_term_destroy
+# define window_free         tickit_window_destroy
+# define render_buffer_free  tickit_renderbuffer_destroy
+# define trace_pointer(a, b, c, d)  ((void)0)
+#endif
+
+
 /*
  * Map object types to their Tickit event callback types.
  */
@@ -65,8 +100,9 @@ static inline int u2i(uint v) {
 
 
 terminal::terminal()
-    : terminal(tickit_term_open_stdio(), tickit_term_destroy)
+    : terminal(tickit_term_open_stdio(), terminal_free)
 {
+    trace_pointer("terminal", "TickitTerm", unwrap(), "   +");
 }
 
 terminal& terminal::flush() { tickit_term_flush(unwrap()); return *this; }
@@ -286,7 +322,10 @@ static inline TickitRect to_rect(uint top, uint left, uint lines, uint cols)
 }
 
 window::window(terminal& term)
-    : window(tickit_window_new_root(term.unwrap()), tickit_window_destroy) { }
+    : window(tickit_window_new_root(term.unwrap()), window_free)
+{
+    trace_pointer("window", "TickitWindow", unwrap(), "   +");
+}
 
 window::window(window& parent,
                uint top, uint left, uint lines, uint cols,
@@ -294,7 +333,10 @@ window::window(window& parent,
     : window(tickit_window_new(parent.unwrap(),
                                to_rect(top, left, lines, cols),
                                to_tickit(flags)),
-             tickit_window_destroy) { }
+             window_free)
+{
+    trace_pointer("window", "TickitWindow", unwrap(), "   +");
+}
 
 window window::root() const
 {

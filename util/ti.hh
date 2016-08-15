@@ -20,9 +20,12 @@ struct TickitWindow;
 struct TickitTerm;
 struct TickitPen;
 
+
 namespace ti {
 
 using uint = unsigned int;
+
+void _track(const char *tname, const char* ti_tname, void* ptr, const char *what);
 
 #define TI_UNCOPYABLE(name)         \
     private:                        \
@@ -33,6 +36,25 @@ using uint = unsigned int;
     public:              \
         name(name&&) = default
 
+#define TI_WRAP__DEBUG(name, ti_name) \
+        static void track_delete(tickit_type* ptr);        \
+        static void no_delete(tickit_type* ptr) {          \
+            ti::_track(#name, #ti_name, ptr, "kept"); }    \
+        explicit name(tickit_type* ptr, deleter d):        \
+            m_ ## name(ptr, d) { assert(ptr); assert(d);   \
+            ti::_track(#name, #ti_name, ptr, "wrap"); }
+
+#define TI_WRAP__NODEBUG(name, ti_name)                    \
+        static void no_delete(tickit_type*) { }            \
+        explicit name(tickit_type* ptr, deleter d):        \
+            m_ ## name(ptr, d) { assert(ptr); assert(d); }
+
+#if defined(TI_TRACE_POINTERS) && TI_TRACE_POINTERS
+# define TI_WRAP_ TI_WRAP__DEBUG
+#else
+# define TI_WRAP_ TI_WRAP__NODEBUG
+#endif
+
 #define TI_WRAP(name, ti_name)                             \
     public:                                                \
         using tickit_type = ti_name;                       \
@@ -42,10 +64,7 @@ using uint = unsigned int;
             assert(m_ ## name); return m_ ## name.get(); } \
     private:                                               \
         using deleter = std::function<void(ti_name*)>;     \
-        explicit name(tickit_type* ptr, deleter d):        \
-            m_ ## name(ptr, d) { assert(ptr); assert(d);   \
-        }                                                  \
-        static void no_delete(tickit_type*) { }            \
+        TI_WRAP_(name, ti_name)                            \
         std::unique_ptr<tickit_type, deleter> m_ ## name
 
 
@@ -303,6 +322,9 @@ private:
 #undef TI_EVENT_BASE
 #undef TI_UNCOPYABLE
 #undef TI_MOVABLE
+#undef TI_WRAP__NODEBUG
+#undef TI_WRAP__DEBUG
+#undef TI_WRAP_
 #undef TI_WRAP
 
 #endif /* !TI_HH */
