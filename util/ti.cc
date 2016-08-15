@@ -129,6 +129,89 @@ terminal& terminal::write(long long int v)
     return *this;
 }
 
+
+const pen::attr_reg pen::bold      = { pen::attr_bold,      1 };
+const pen::attr_reg pen::underline = { pen::attr_underline, 1 };
+const pen::attr_reg pen::italic    = { pen::attr_italic,    1 };
+const pen::attr_reg pen::blink     = { pen::attr_blink,     1 };
+const pen::attr_reg pen::reverse   = { pen::attr_reverse,   1 };
+const pen::attr_reg pen::strike    = { pen::attr_strike,    1 };
+
+pen::pen(std::initializer_list<pen::attr_reg> l)
+    : m_pen(tickit_pen_new())
+{
+    for (auto reg: l) set(reg);
+}
+
+pen::pen(const pen& other)
+    : m_pen(tickit_pen_ref(other.m_pen))
+{
+}
+
+pen::~pen()
+{
+    tickit_pen_unref(m_pen);
+    m_pen = nullptr;
+}
+
+pen& pen::operator=(pen&& other)
+{
+    if (this != &other) {
+        if (m_pen) {
+            tickit_pen_unref(m_pen);
+            m_pen = nullptr;
+        }
+        std::swap(m_pen, other.m_pen);
+    }
+    return *this;
+}
+
+bool pen::operator==(const pen& other) const {
+    return this == &other
+        || m_pen == other.m_pen
+        || tickit_pen_equiv(m_pen, other.m_pen);
+}
+
+static inline TickitPenAttr to_tickit(pen::attr attr)
+{
+    switch (attr) {
+        case pen::attr_fg:        return TICKIT_PEN_FG;
+        case pen::attr_bg:        return TICKIT_PEN_BG;
+        case pen::attr_bold:      return TICKIT_PEN_BOLD;
+        case pen::attr_underline: return TICKIT_PEN_UNDER;
+        case pen::attr_italic:    return TICKIT_PEN_ITALIC;
+        case pen::attr_reverse:   return TICKIT_PEN_REVERSE;
+        case pen::attr_strike:    return TICKIT_PEN_STRIKE;
+        case pen::attr_blink:     return TICKIT_PEN_BLINK;
+    }
+    assert(false);
+    return TICKIT_PEN_FG;
+}
+
+pen& pen::set(pen::attr tag, int value)
+{
+    TickitPenAttr attr_tag = to_tickit(tag);
+    switch (tickit_pen_attrtype(attr_tag)) {
+        case TICKIT_PENTYPE_BOOL:
+            tickit_pen_set_bool_attr(m_pen, attr_tag, value != 0);
+            break;
+        case TICKIT_PENTYPE_INT:
+            tickit_pen_set_int_attr(m_pen, attr_tag, value);
+            break;
+        case TICKIT_PENTYPE_COLOUR:
+            tickit_pen_set_colour_attr(m_pen, attr_tag, value);
+            break;
+    }
+    return *this;
+}
+
+pen& pen::copy_from(const pen& other, pen::copy_mode mode)
+{
+    tickit_pen_copy(m_pen, other.m_pen, mode == pen::copy_mode::overwrite);
+    return *this;
+}
+
+
 render_buffer& render_buffer::write(const std::string& s)
 {
     tickit_renderbuffer_textn(unwrap(), s.data(), s.size());
@@ -150,6 +233,30 @@ render_buffer& render_buffer::write(long long int v)
 render_buffer& render_buffer::clear()
 {
     tickit_renderbuffer_clear(unwrap());
+    return *this;
+}
+
+render_buffer& render_buffer::save()
+{
+    tickit_renderbuffer_save(unwrap());
+    return *this;
+}
+
+render_buffer& render_buffer::save_pen()
+{
+    tickit_renderbuffer_savepen(unwrap());
+    return *this;
+}
+
+render_buffer& render_buffer::restore()
+{
+    tickit_renderbuffer_restore(unwrap());
+    return *this;
+}
+
+render_buffer& render_buffer::set_pen(const pen& p)
+{
+    tickit_renderbuffer_setpen(unwrap(), p.unwrap());
     return *this;
 }
 

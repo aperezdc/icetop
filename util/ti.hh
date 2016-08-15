@@ -153,6 +153,71 @@ static inline terminal& operator<<(terminal& term, const T& v)
 }
 
 
+class pen {
+public:
+    enum attr {
+        attr_fg,
+        attr_bg,
+        attr_bold,
+        attr_italic,
+        attr_underline,
+        attr_reverse,
+        attr_strike,
+        attr_blink
+    };
+    using attr_reg = std::pair<enum attr, int>;
+
+    static const attr_reg bold, italic, underline, reverse, strike, blink;
+
+    static inline attr_reg fg(int color = -1) { return { attr_fg, color }; }
+    static inline attr_reg bg(int color = -1) { return { attr_bg, color }; }
+
+    pen(std::initializer_list<attr_reg> l);
+    pen(const pen& other);
+
+    inline pen(pen&& other): m_pen(nullptr) { *this = std::move(other); }
+
+    ~pen();
+
+    pen& operator=(pen&& other);
+
+    pen& operator=(const pen& other) {
+        if (this != &other) {
+            pen copy(other);
+            std::swap(m_pen, copy.m_pen);
+        }
+        return *this;
+    }
+
+    bool operator==(const pen& other) const;
+
+    pen& set(attr tag, int value = -1);
+    inline pen& set(const attr_reg& a) {
+        return set(a.first, a.second);
+    }
+
+    enum copy_mode { copy_normal, overwrite };
+    pen& copy_from(const pen& other, copy_mode mode = copy_mode::copy_normal);
+
+    inline pen copy() const {
+        pen newpen {};
+        newpen.copy_from(*this);
+        return newpen;
+    }
+
+    inline TickitPen* unwrap() { assert(m_pen); return m_pen; }
+    inline const TickitPen* unwrap() const { assert(m_pen); return m_pen; }
+
+private:
+    // XXX: Note that TickitPen keeps its own reference count, so this does
+    //      not use std::shared_ptr; instead we define the needed operators
+    //      to call tickit_pen_ref() and tickit_pen_unref().
+    TickitPen *m_pen;
+
+    pen(TickitPen *p);
+};
+
+
 class render_buffer {
     TI_UNCOPYABLE(render_buffer);
     TI_MOVABLE(render_buffer);
@@ -164,6 +229,12 @@ public:
     render_buffer& write(long long int);
 
     render_buffer& clear();
+
+    // Paint state.
+    render_buffer& save();
+    render_buffer& save_pen();
+    render_buffer& restore();
+    render_buffer& set_pen(const pen& p);
 
     // Movement.
     render_buffer& at(uint line, uint col);

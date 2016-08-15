@@ -385,6 +385,8 @@ MESSAGE_HANDLER (MON_JOB_DONE, MonJobDoneMsg, m)
 
 
 struct host_layout {
+    static ti::pen line_pens[2];
+
     host_layout(ti::window&& w, const host_info& host)
         : window(std::move(w)), hostname(host.name)
         , platform(host.platform)
@@ -409,7 +411,7 @@ struct host_layout {
     }
 
     void on_expose(ti::window::expose_event& ev) {
-        ev.render.clear();
+        ev.render.set_pen(line_pens[position() % 2]).clear();
         ev.render.at(0, 1) << platform;
         ev.render.at(0, 9) << hostname;
         ev.render.at(0, 30) << filename;
@@ -444,8 +446,15 @@ struct host_layout {
     const char *state_string;
 };
 
+ti::pen host_layout::line_pens[2] = {
+    { ti::pen::bg(235) },
+    { ti::pen::bg(234) },
+};
+
 
 struct screen_layout {
+    static ti::pen status_pen;
+
     screen_layout(ti::terminal& term)
         : root(ti::window(term))
         , status(root, root.lines() - 1, 0, 1, root.columns())
@@ -454,7 +463,7 @@ struct screen_layout {
             char timestring[15];
             struct tm *t = localtime(&statustime);
             strftime(timestring, sizeof(timestring), "[%H:%M:%S] ", t);
-            ev.render.clear().at(0, 1) << timestring << statusline;
+            ev.render.set_pen(status_pen).clear().at(0, 1) << timestring << statusline;
             return true;
         });
 
@@ -520,6 +529,9 @@ struct screen_layout {
     ti::window root;
     ti::window status;
 };
+
+
+ti::pen screen_layout::status_pen = { ti::pen::bg(4) };
 
 
 #include <signal.h>
