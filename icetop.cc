@@ -6,6 +6,7 @@
  */
 
 #include "util/getenv.hh"
+#include "util/ti.hh"
 
 extern "C" {
 #include <libdill.h>
@@ -34,7 +35,9 @@ public:
     std::string  name;
     std::string  platform;
 
-    host_info(unsigned int id_): id(id_) {}
+    host_info(unsigned int id_): id(id_), name(), platform() {}
+    host_info(const host_info&) = delete;
+    host_info(host_info&&) = default;
 
     bool operator==(const host_info& rhs) const { return id == rhs.id; }
     bool operator!=(const host_info& rhs) const { return id != rhs.id; }
@@ -381,54 +384,181 @@ MESSAGE_HANDLER (MON_JOB_DONE, MonJobDoneMsg, m)
 }
 
 
+struct host_layout {
+    host_layout(ti::window&& w, const host_info& host)
+        : window(std::move(w)), hostname(host.name)
+        , platform(host.platform)
+        , filename()
+        , state_string("idle")
+    {
+        window.on_expose([this](ti::window::expose_event& event) {
+            on_expose(event);
+            return true;
+        });
+    }
+
+    host_layout(host_layout&&) = default;
+
+    unsigned position() const {
+        return window.top();
+    }
+
+    void move_up() {
+        window.set_position(position() - 1, window.left());
+        window.root().expose();
+    }
+
+    void on_expose(ti::window::expose_event& ev) {
+        ev.render.clear();
+        ev.render.at(0, 1) << platform;
+        ev.render.at(0, 9) << hostname;
+        ev.render.at(0, 30) << filename;
+        if (ev.columns >= (11 + origin.size())) {
+            ev.render.at(0, ev.columns - 11 - origin.size()) << origin;
+            ev.render.at(0, ev.columns - 10) << state_string;
+        }
+    }
+
+    void host_info_updated(const host_info& host) {
+        hostname = host.name;
+        platform = host.platform;
+        window.expose();
+    }
+
+    void job_info_updated(const job_info& job) {
+        if (auto server = job.server()) {
+            origin = job.client()->name;
+        } else {
+            origin = "";
+        }
+        state_string = job.state_string();
+        filename = job.filename;
+        window.expose();
+    }
+
+    ti::window window;
+    std::string hostname;
+    std::string platform;
+    std::string filename;
+    std::string origin;
+    const char *state_string;
+};
+
+
+struct screen_layout {
+    screen_layout(ti::terminal& term)
+        : root(ti::window(term))
+        , status(root, root.lines() - 1, 0, 1, root.columns())
+    {
+        status.on_expose([this](ti::window::expose_event& ev) {
+            char timestring[15];
+            struct tm *t = localtime(&statustime);
+            strftime(timestring, sizeof(timestring), "[%H:%M:%S] ", t);
+            ev.render.clear().at(0, 1) << timestring << statusline;
+            return true;
+        });
+
+        root.on_geometry_change([this, &term](ti::window::geometry_change_event& ev) {
+            status.set_geometry(ev.lines - 1, 0, 1, ev.columns);
+            term.clear();
+            root.expose();
+            return true;
+        });
+    }
+
+    void host_info_updated(const host_info& host) {
+        if (host.offline) {
+            set_status("Host " + host.name + " went offline");
+            auto index_item = hostid_to_index.find(host.id);
+            if (index_item == hostid_to_index.end()) {
+                // No line for it: do nothing.
+                return;
+            }
+            auto index = index_item->second;
+            host_layouts.erase(host_layouts.begin() + index);
+            for (auto it = host_layouts.begin() + index; it != host_layouts.end(); ++it) {
+                it->get()->move_up();
+            }
+            hostid_to_index.erase(index_item);
+        } else {
+            auto index_item = hostid_to_index.find(host.id);
+            if (index_item == hostid_to_index.end()) {
+                set_status("Host " + host.name + " (" + host.platform + ") came online");
+                unsigned index = host_layouts.size();  // Add it at the end.
+                ti::window w { root, index, 0, 1, root.columns() };
+                host_layouts.emplace_back(std::make_unique<host_layout>(std::move(w), host));
+                hostid_to_index[host.id] = index;
+            } else {
+                set_status("Host " + host.name + " (" + host.platform + ") is still online");
+                host_layouts[index_item->second]->host_info_updated(host);
+            }
+        }
+    }
+
+    void job_info_updated(const job_info& job) {
+        auto index_item = hostid_to_index.find(job.server() ? job.server_id : job.client_id);
+        if (index_item == hostid_to_index.end())
+            return;
+        host_layouts[index_item->second]->job_info_updated(job);
+    }
+
+    void flush() {
+        root.flush();
+    }
+
+    void set_status(const std::string& s) {
+        statustime = time(nullptr);
+        statusline = s;
+        status.expose();
+    }
+
+    std::unordered_map<int, size_t> hostid_to_index;
+    std::vector<std::unique_ptr<host_layout>> host_layouts;
+    std::string statusline;
+    time_t statustime;
+
+    ti::window root;
+    ti::window status;
+};
+
+
+#include <signal.h>
+
+static bool running = true;
+static void handle_sigint(int)
+{
+    running = false;
+}
+
+
 int main(int argc, char **argv)
 {
-    icecc_monitor monitor([](const host_info& host) {
-        printf("Host %u '%s' (%s, load %i, max %u) is %s\n",
-               host.id,
-               host.name.c_str(),
-               host.platform.c_str(),
-               host.load,
-               host.max_jobs,
-               host.offline ? "offline" : "online");
-    }, [](const job_info& job) {
-        if (job.state != job_info::FINISHED && job.state != job_info::FAILED)
-            return;
-        // TODO: Investigate what causes jobs with empty filenames.
-        if (!job.filename.size())
-            return;
-        const char *server = nullptr;
-        const char *client = "?";
-        if (job.server_id) {
-            auto host = job.server();
-            if (host) server = host->name.c_str();
-        }
-        if (job.client_id) {
-            auto host = job.client();
-            if (host) client = host->name.c_str();
-        }
-        if (server) {
-            printf("Job %u [%s->%s] '%s' %s\n",
-                   job.id,
-                   client,
-                   server,
-                   job.filename.c_str(),
-                   job.state_string());
-        } else {
-            printf("Job %u [%s] '%s' %s\n",
-                   job.id,
-                   client,
-                   job.filename.c_str(),
-                   job.state_string());
-        }
-    });
+    ti::terminal term { };
+    term.wait_ready();
 
-    printf("Waiting for scheduler...\n");
+    screen_layout layout { term };
+
+    icecc_monitor monitor {
+        [&layout](const host_info& host) {
+            layout.host_info_updated(host);
+        },
+        [&layout](const job_info& job) {
+            layout.job_info_updated(job);
+        }
+    };
+
+    term << "Waiting for scheduler...\n";
     go(monitor.check_scheduler());
     while (!monitor.scheduler) msleep(now() + 100);
 
     go(monitor.listen());
-    while (true) {
-        msleep(now() + 100);
+
+    term.set(ti::terminal::altscreen).clear();
+
+    signal(SIGINT, handle_sigint);
+    while (running) {
+        layout.flush();
+        term.wait_input(10);
+        msleep(40);
     }
 }
