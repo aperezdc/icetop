@@ -386,6 +386,7 @@ MESSAGE_HANDLER (MON_JOB_DONE, MonJobDoneMsg, m)
 
 struct host_layout {
     static ti::pen line_pens[2];
+    static ti::pen busy_pen, warn_pen, okay_pen;
 
     host_layout(ti::window&& w, const host_info& host)
         : window(std::move(w)), hostname(host.name)
@@ -422,6 +423,8 @@ struct host_layout {
             ev.render.at(0, ++col) << origin;
             col = ev.columns - 11;
             ev.render.clear(0, col,  ev.columns - col);
+            if (auto pen = state_pen())
+                ev.render.set_pen(*pen);
             ev.render.at(0, ++col) << state_string;
         }
     }
@@ -433,14 +436,31 @@ struct host_layout {
     }
 
     void job_info_updated(const job_info& job) {
+        if (job.state == job_info::WAITING)
+            return;
         if (job.server()) {
             origin = job.client()->name;
         } else {
             origin = "";
         }
+        state = job.state;
         state_string = job.state_string();
         filename = job.filename;
         window.expose();
+    }
+
+    ti::pen* state_pen() const {
+        switch (state) {
+            case job_info::FAILED:
+                return &warn_pen;
+            case job_info::FINISHED:
+                return &okay_pen;
+            case job_info::LOCAL:
+            case job_info::COMPILING:
+                return &busy_pen;
+            default:
+                return nullptr;
+        }
     }
 
     ti::window window;
@@ -449,12 +469,16 @@ struct host_layout {
     std::string filename;
     std::string origin;
     const char *state_string;
+    job_info::job_state state;
 };
 
 ti::pen host_layout::line_pens[2] = {
     { ti::pen::bg(235) },
     { ti::pen::bg(234) },
 };
+ti::pen host_layout::busy_pen = { ti::pen::fg(3), ti::pen::bold };
+ti::pen host_layout::okay_pen = { ti::pen::fg(2), ti::pen::bold };
+ti::pen host_layout::warn_pen = { ti::pen::fg(1), ti::pen::bold };
 
 
 struct screen_layout {
