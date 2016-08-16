@@ -314,7 +314,7 @@ public:
     };
     window(terminal& term);
     window(window& parent,
-           uint top, uint left, uint lines, uint cols,
+           const rect& r,
            enum flags flags = no_flags);
 
     window root() const;

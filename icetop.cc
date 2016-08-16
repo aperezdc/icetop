@@ -487,7 +487,7 @@ struct screen_layout {
 
     screen_layout(ti::terminal& term)
         : root(ti::window(term))
-        , status(root, root.lines() - 1, 0, 1, root.columns())
+        , status(root, { root.lines() - 1, 0, 1, root.columns() })
     {
         status.on_expose([this](ti::window::expose_event& ev) {
             char timestring[15];
@@ -534,7 +534,7 @@ struct screen_layout {
             if (index_item == hostid_to_index.end()) {
                 set_status("Host " + host.name + " (" + host.platform + ") came online");
                 unsigned index = host_layouts.size();  // Add it at the end.
-                ti::window w { root, index, 0, 1, root.columns() };
+                ti::window w { root, { index, 0, 1, root.columns() } };
                 host_layouts.emplace_back(std::make_unique<host_layout>(std::move(w), host));
                 hostid_to_index[host.id] = index;
             } else {

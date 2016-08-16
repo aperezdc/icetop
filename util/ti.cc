@@ -113,13 +113,6 @@ TickitRect to_tickit(const rect& r)
     return tr;
 }
 
-template <>
-const TickitRect* to_tickit(const rect& r)
-{
-    u2i(r.top); u2i(r.left); u2i(r.lines); u2i(r.columns);
-    return reinterpret_cast<const TickitRect*>(&r);
-}
-
 
 template <typename T, typename TT> static inline T from_tickit(TT r);
 
@@ -375,13 +368,6 @@ static inline TickitWindowFlags to_tickit(enum window::flags flags)
     return static_cast<TickitWindowFlags>(r);
 }
 
-static inline TickitRect to_tickit_rect(uint top, uint left, uint lines, uint cols)
-{
-    TickitRect r;
-    tickit_rect_init_sized(&r, u2i(top), u2i(left), u2i(lines), u2i(cols));
-    return r;
-}
-
 window::window(terminal& term)
     : window(tickit_window_new_root(term.unwrap()), window_free)
 {
@@ -389,10 +375,10 @@ window::window(terminal& term)
 }
 
 window::window(window& parent,
-               uint top, uint left, uint lines, uint cols,
+               const rect& r,
                enum window::flags flags)
     : window(tickit_window_new(parent.unwrap(),
-                               to_tickit_rect(top, left, lines, cols),
+                               to_tickit<TickitRect, const rect&>(r),
                                to_tickit(flags)),
              window_free)
 {
