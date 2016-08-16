@@ -474,7 +474,7 @@ struct host_layout {
 };
 
 ti::pen host_layout::line_pens[2] = {
-    { ti::pen::bg(235) },
+    { ti::pen::bg() },
     { ti::pen::bg(234) },
 };
 ti::pen host_layout::busy_pen = { ti::pen::fg(3), ti::pen::bold };
