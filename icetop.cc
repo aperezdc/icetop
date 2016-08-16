@@ -414,17 +414,16 @@ struct host_layout {
     void on_expose(ti::window::expose_event& ev) {
         ev.render.set_pen(line_pens[position() % 2]).clear(ev.area);
         ev.render.at(0, 1) << platform;
-        ev.render.at(0, 9).add_pen(host_pen) << hostname;
+        ev.render.at(0, 9) << host_pen << hostname;
         ev.render.at(0, 30).restore() << filename;
         if (window.columns() >= (11 + origin.size())) {
             // TODO: Do something better than erasing the line all over.
             auto col = window.columns() - 12 - origin.size();
             ev.render.clear(0, col, window.columns() - col);
-            ev.render.at(0, ++col).add_pen(host_pen) << origin;
+            ev.render.at(0, ++col) << host_pen << origin;
             col = window.columns() - 11;
             ev.render.clear(0, col, window.columns() - col).restore();
-            if (auto pen = state_pen())
-                ev.render.add_pen(*pen);
+            if (auto pen = state_pen()) ev.render << *pen;
             ev.render.at(0, ++col) << state_string;
             ev.render.restore();
         }

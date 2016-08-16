@@ -288,6 +288,12 @@ static inline render_buffer& operator<<(render_buffer& rb, const T& v)
     return rb.write(v);
 }
 
+template <>
+render_buffer& operator<<(render_buffer& rb, const pen& p)
+{
+    return rb.add_pen(p);
+}
+
 
 class window {
     TI_UNCOPYABLE(window);
