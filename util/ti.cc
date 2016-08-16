@@ -99,6 +99,47 @@ static inline int u2i(uint v) {
 }
 
 
+template <typename TT, typename T> static inline TT to_tickit(T r);
+
+template <>
+TickitRect to_tickit(const rect& r)
+{
+    TickitRect tr = {
+        .top = u2i(r.top),
+        .left = u2i(r.left),
+        .lines = u2i(r.lines),
+        .cols = u2i(r.columns),
+    };
+    return tr;
+}
+
+template <>
+const TickitRect* to_tickit(const rect& r)
+{
+    u2i(r.top); u2i(r.left); u2i(r.lines); u2i(r.columns);
+    return reinterpret_cast<const TickitRect*>(&r);
+}
+
+
+template <typename T, typename TT> static inline T from_tickit(TT r);
+
+template <>
+rect& from_tickit(TickitRect* r)
+{
+    assert(r->top >= 0);
+    assert(r->left >= 0);
+    assert(r->lines >= 0);
+    assert(r->cols >= 0);
+    return *reinterpret_cast<rect*>(r);
+}
+
+template <>
+rect from_tickit(const TickitRect& r)
+{
+    return { i2u(r.top), i2u(r.left), i2u(r.lines), i2u(r.cols) };
+}
+
+
 terminal::terminal()
     : terminal(tickit_term_open_stdio(), terminal_free)
 {
@@ -272,6 +313,13 @@ render_buffer& render_buffer::clear()
     return *this;
 }
 
+render_buffer& render_buffer::clear(const rect& r)
+{
+    auto tr(to_tickit<TickitRect, const rect&>(r));
+    tickit_renderbuffer_eraserect(unwrap(), &tr);
+    return *this;
+}
+
 render_buffer& render_buffer::clear(uint line, uint col, uint cols)
 {
     tickit_renderbuffer_erase_at(unwrap(), u2i(line), u2i(col), u2i(cols));
@@ -327,7 +375,7 @@ static inline TickitWindowFlags to_tickit(enum window::flags flags)
     return static_cast<TickitWindowFlags>(r);
 }
 
-static inline TickitRect to_rect(uint top, uint left, uint lines, uint cols)
+static inline TickitRect to_tickit_rect(uint top, uint left, uint lines, uint cols)
 {
     TickitRect r;
     tickit_rect_init_sized(&r, u2i(top), u2i(left), u2i(lines), u2i(cols));
@@ -344,7 +392,7 @@ window::window(window& parent,
                uint top, uint left, uint lines, uint cols,
                enum window::flags flags)
     : window(tickit_window_new(parent.unwrap(),
-                               to_rect(top, left, lines, cols),
+                               to_tickit_rect(top, left, lines, cols),
                                to_tickit(flags)),
              window_free)
 {
@@ -381,12 +429,15 @@ window& window::set_position(uint line, uint col)
     return *this;
 }
 
-window& window::set_geometry(uint line, uint col, uint lines, uint columns)
+window& window::set_geometry(const rect& r)
 {
-    TickitRect r;
-    tickit_rect_init_sized(&r, u2i(line), u2i(col), u2i(lines), u2i(columns));
-    tickit_window_set_geometry(unwrap(), r);
+    tickit_window_set_geometry(unwrap(), to_tickit<TickitRect, const rect&>(r));
     return *this;
+}
+
+rect window::geometry() const
+{
+    return from_tickit<rect, const TickitRect&>(tickit_window_get_geometry(unwrap()));
 }
 
 uint window::top() const { return i2u(tickit_window_top(unwrap())); }
@@ -446,15 +497,15 @@ struct event_handler {
     inline bool run(TickitWindow*, TickitExposeEventInfo* info) {
         render_buffer rb { info->rb, render_buffer::no_delete };
         window::expose_event event {
-            rb, i2u(info->rect.top), i2u(info->rect.left), i2u(info->rect.lines), i2u(info->rect.cols)
+            rb, from_tickit<rect&>(&info->rect)
         };
         return handle(event);
     }
 
     inline bool run(TickitWindow*, TickitGeomchangeEventInfo *info) {
         window::geometry_change_event event {
-            i2u(info->oldrect.top), i2u(info->oldrect.left), i2u(info->oldrect.lines), i2u(info->oldrect.cols),
-            i2u(info->rect.top), i2u(info->rect.left), i2u(info->rect.lines), i2u(info->rect.cols)
+            from_tickit<rect&>(&info->oldrect),
+            from_tickit<rect&>(&info->rect)
         };
         return handle(event);
     }

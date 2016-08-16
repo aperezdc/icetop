@@ -412,17 +412,17 @@ struct host_layout {
     }
 
     void on_expose(ti::window::expose_event& ev) {
-        ev.render.set_pen(line_pens[position() % 2]).clear();
+        ev.render.set_pen(line_pens[position() % 2]).clear(ev.area);
         ev.render.at(0, 1) << platform;
         ev.render.at(0, 9).add_pen(host_pen) << hostname;
         ev.render.at(0, 30).restore() << filename;
-        if (ev.columns >= (11 + origin.size())) {
+        if (window.columns() >= (11 + origin.size())) {
             // TODO: Do something better than erasing the line all over.
-            auto col = ev.columns - 12 - origin.size();
-            ev.render.clear(0, col, ev.columns - col);
+            auto col = window.columns() - 12 - origin.size();
+            ev.render.clear(0, col, window.columns() - col);
             ev.render.at(0, ++col).add_pen(host_pen) << origin;
-            col = ev.columns - 11;
-            ev.render.clear(0, col,  ev.columns - col).restore();
+            col = window.columns() - 11;
+            ev.render.clear(0, col, window.columns() - col).restore();
             if (auto pen = state_pen())
                 ev.render.add_pen(*pen);
             ev.render.at(0, ++col) << state_string;
@@ -498,8 +498,18 @@ struct screen_layout {
             return true;
         });
 
+        root.on_expose([](ti::window::expose_event& ev) {
+            // Just clear the backgrond. Avoids ghost text after certain
+            // kinds of geometry changes.
+            ev.render.clear(ev.area);
+            return true;
+        });
+
         root.on_geometry_change([this, &term](ti::window::geometry_change_event& ev) {
-            status.set_geometry(ev.lines - 1, 0, 1, ev.columns);
+            auto geom = status.geometry();
+            assert(geom.top > 0);
+            geom.top--;
+            status.set_geometry(geom);
             term.clear();
             root.expose();
             return true;

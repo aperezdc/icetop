@@ -73,6 +73,22 @@ template <typename T> struct event_handler;
 class render_buffer;
 
 
+struct rect {
+    uint top, left, lines, columns;
+
+    rect(rect&&) = default;
+    rect(const rect&) = default;
+
+    bool operator==(const rect& other) const {
+        return this == &other ||
+            (top == other.top &&
+             left == other.left &&
+             lines == other.lines &&
+             columns == other.columns);
+    }
+};
+
+
 template <typename T>
 class event_binding_base {
     TI_MOVABLE(event_binding_base);
@@ -119,22 +135,20 @@ private:
 TI_EVENT_BASE(expose_event_base)
 {
     render_buffer& render;
-    uint top, left, lines, columns;
+    rect& area;
 
-    expose_event_base(render_buffer& rb, uint t, uint l, uint ll, uint cc)
-        : render(rb), top(t), left(l), lines(ll), columns(cc) { }
+    expose_event_base(render_buffer& rb, rect& a)
+        : render(rb), area(a) { }
 };
 
 
 TI_EVENT_BASE(geometry_change_event_base)
 {
-    uint old_top, old_left, old_lines, old_columns;
-    uint top, left, lines, columns;
+    rect& old_area;
+    rect& area;
 
-    geometry_change_event_base(uint ot, uint ol, uint oll, uint occ,
-                               uint nt, uint nl, uint nll, uint ncc)
-        : old_top(ot), old_left(ol), old_lines(oll), old_columns(occ)
-        , top(nt), left(nl), lines(nll), columns(ncc) { }
+    geometry_change_event_base(rect& oa, rect& a)
+        : old_area(oa), area(a) { }
 };
 
 
@@ -248,6 +262,7 @@ public:
     render_buffer& write(long long int);
 
     render_buffer& clear();
+    render_buffer& clear(const rect& r);
     render_buffer& clear(uint line, uint col, uint columns);
 
     // Paint state.
@@ -308,7 +323,8 @@ public:
     uint columns() const;
 
     window& set_position(uint line, uint col);
-    window& set_geometry(uint line, uint col, uint lines, uint columns);
+    window& set_geometry(const rect& r);
+    rect geometry() const;
 
     event_binding on_expose(expose_event::functor_type f);
     event_binding on_geometry_change(geometry_change_event::functor_type f);
