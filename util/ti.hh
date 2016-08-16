@@ -330,6 +330,7 @@ public:
 
     window& set_position(uint line, uint col);
     window& set_geometry(const rect& r);
+    rect absolute_geometry() const;
     rect geometry() const;
 
     event_binding on_expose(expose_event::functor_type f);

@@ -421,6 +421,11 @@ window& window::set_geometry(const rect& r)
     return *this;
 }
 
+rect window::absolute_geometry() const
+{
+    return from_tickit<rect, const TickitRect&>(tickit_window_get_abs_geometry(unwrap()));
+}
+
 rect window::geometry() const
 {
     return from_tickit<rect, const TickitRect&>(tickit_window_get_geometry(unwrap()));
