@@ -333,6 +333,11 @@ public:
     rect absolute_geometry() const;
     rect geometry() const;
 
+    enum scroll { with_children };
+    window& scroll(int downward, int rightward, enum scroll);
+    window& scroll(int downward, int rightward);
+    window& scroll(int downward, int rightward, const rect& r);
+
     event_binding on_expose(expose_event::functor_type f);
     event_binding on_geometry_change(geometry_change_event::functor_type f);
 

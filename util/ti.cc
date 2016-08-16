@@ -113,6 +113,12 @@ TickitRect to_tickit(const rect& r)
     return tr;
 }
 
+template <>
+const TickitRect* to_tickit(const rect& r)
+{
+    u2i(r.top); u2i(r.left); u2i(r.lines); u2i(r.columns);
+    return reinterpret_cast<const TickitRect*>(&r);
+}
 
 template <typename T, typename TT> static inline T from_tickit(TT r);
 
@@ -429,6 +435,29 @@ rect window::absolute_geometry() const
 rect window::geometry() const
 {
     return from_tickit<rect, const TickitRect&>(tickit_window_get_geometry(unwrap()));
+}
+
+window& window::scroll(int downward, int rightward)
+{
+    tickit_window_scroll(unwrap(), downward, rightward);
+    return *this;
+}
+
+window& window::scroll(int downward, int rightward, enum window::scroll mode)
+{
+    assert(mode == window::scroll::with_children);
+    tickit_window_scroll_with_children(unwrap(), downward, rightward);
+    return *this;
+}
+
+window& window::scroll(int downward, int rightward, const rect&r)
+{
+    tickit_window_scrollrect(unwrap(),
+                             to_tickit<const TickitRect*, const rect&>(r),
+                             downward,
+                             rightward,
+                             tickit_window_get_pen(unwrap()));
+    return *this;
 }
 
 uint window::top() const { return i2u(tickit_window_top(unwrap())); }
