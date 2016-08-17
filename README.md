@@ -11,7 +11,7 @@ console output.
 Screenshot
 ----------
 
-![Screenshot](https://github.com/aperezdc/icetop/raw/master/icetop.png)
+![Screenshot](https://github.com/aperezdc/icetop/raw/master/icetop.gif)
 
 
 Building
