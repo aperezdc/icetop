@@ -5,8 +5,8 @@ CXX      = @CXX@
 LD       = @CXX@
 
 CPPFLAGS = @CPPFLAGS@ @DEFS@
-CXXFLAGS = @ICETOP_CFLAGS@ @CXXFLAGS@ -std=c++14 -Wall
-LDLIBS   = @ICETOP_LIBS@ @LIBS@
+CXXFLAGS = @CXXFLAGS@ -Wall
+LDLIBS   = @LIBS@
 LDFLAGS  = @LDFLAGS@
 
 ALL_OBJS = icetop.o util/getenv.o util/ti.o
