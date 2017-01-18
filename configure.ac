@@ -2,19 +2,38 @@ AC_PREREQ([2.69])
 AC_INIT([icetop], [0], [https://github.com/aperezdc/icetop/issues])
 AC_CONFIG_SRCDIR([icetop.cc])
 
-PKG_CHECK_MODULES([ICETOP], [libdill icecc tickit])
-CPPFLAGS="${CPPFLAGS} ${ICETOP_CFLAGS}"
-LIBS="${LIBS} ${ICETOP_LIBS}"
-
 AC_PROG_CXX
 AC_LANG([C++])
 AX_CXX_COMPILE_STDCXX_14([noext], [mandatory])
 AC_LANG_WERROR
 
-AC_CHECK_HEADER([libdill.h], [],
-				[AC_MSG_ERROR([The libdill.h header is required])])
-AC_CHECK_HEADER([icecc/comm.h], [],
-				[AC_MSG_ERROR([The icecc/comm.h header is required])])
+PKG_CHECK_MODULES([ICETOP], [libdill icecc tickit])
+CXXFLAGS="${CXXFLAGS} ${ICETOP_CFLAGS}"
+LIBS="${LIBS} ${ICETOP_LIBS}"
+
+AC_MSG_CHECKING([for <libdill.h>])
+AC_COMPILE_IFELSE([
+	AC_LANG_SOURCE([[
+	#include <libdill.h>
+	]])
+], [
+	AC_MSG_RESULT([yes])
+], [
+	AC_MSG_RESULT([no])
+	AC_MSG_ERROR([The libdill.h header is required])
+])
+
+AC_MSG_CHECKING([for <icecc/comm.h>])
+AC_COMPILE_IFELSE([
+	AC_LANG_SOURCE([[
+	#include <icecc/comm.h>
+	]])
+], [
+	AC_MSG_RESULT([yes])
+], [
+	AC_MSG_RESULT([no])
+	AC_MSG_ERROR([The icecc/comm.h header is required])
+])
 
 # Check wether icecc was compiled using the old C++ ABI, and
 # work around this to be able to still use C++11 (and later)
