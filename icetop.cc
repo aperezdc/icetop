@@ -184,13 +184,11 @@ public:
 
 
     coroutine void check_scheduler(bool deleteit=false) {
+        auto deadline = now() + 3000;  // Allow up to three seconds.
         if (deleteit) {
-            discover = nullptr;
             scheduler = nullptr;
         }
         while (!scheduler) {
-            msleep(now() + 1000);
-
             std::vector<std::string> names;
             if (!network_name.empty()) {
                 names.push_back(network_name);
@@ -202,16 +200,24 @@ public:
             }
 
             for (auto name: names) {
-                if (!discover || discover->timed_out()) {
-                    discover.reset(new DiscoverSched(name));
-                }
+                auto discover = std::make_unique<DiscoverSched>(name);
                 scheduler.reset(discover->try_get_scheduler());
+                while (!scheduler && !discover->timed_out()) {
+                    if (discover->listen_fd() != -1) {
+                        if (fdin(discover->listen_fd(), deadline)) {
+                            perror("fdin");
+                            exit(EXIT_FAILURE);
+                        }
+                    } else {
+                        msleep(now() + 50);
+                    }
+                    scheduler.reset(discover->try_get_scheduler());
+                }
                 if (scheduler) {
                     state = ONLINE;
                     network_name = discover->networkName();
                     scheduler_name = discover->schedulerName();
                     scheduler->setBulkTransfer();
-                    discover.reset(nullptr);
                     return;
                 }
             }
@@ -247,7 +253,6 @@ private:
     monitor_state                  state;
     team_info                      team;
     job_info_map                   jobs;
-    std::unique_ptr<DiscoverSched> discover;
 
     bool _handle_activity();
 
