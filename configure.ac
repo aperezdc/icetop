@@ -2,15 +2,14 @@ AC_PREREQ([2.69])
 AC_INIT([icetop], [0], [https://github.com/aperezdc/icetop/issues])
 AC_CONFIG_SRCDIR([icetop.cc])
 
+PKG_CHECK_MODULES([ICETOP], [libdill icecc tickit])
+CPPFLAGS="${CPPFLAGS} ${ICETOP_CFLAGS}"
+LIBS="${LIBS} ${ICETOP_LIBS}"
+
 AC_PROG_CXX
 AC_LANG([C++])
 AX_CXX_COMPILE_STDCXX_14([noext], [mandatory])
 AC_LANG_WERROR
-
-PKG_CHECK_MODULES([ICETOP], [libdill icecc tickit])
-
-CPPFLAGS="${CPPFLAGS} ${ICETOP_CFLAGS}"
-LIBS="${LIBS} ${ICETOP_LIBS}"
 
 AC_CHECK_HEADER([libdill.h], [],
 				[AC_MSG_ERROR([The libdill.h header is required])])
