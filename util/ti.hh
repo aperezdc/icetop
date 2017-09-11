@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include <cassert>
+#include <functional>
 #include <experimental/optional>
 using std::experimental::optional;
 
