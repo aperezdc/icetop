@@ -7,6 +7,14 @@ playground for [libdill](http://libdill.org), testing C++14 features
 (and C++1z, when compilers implementing it), and experimenting with text
 console output.
 
+Warning ⚠️
+-----------
+
+I rarely update this project, so it may or may not work for you. If you
+want a console monitor for Icecream that works *and* receives more
+maintenance, [icecream-sundae](https://github.com/JPEWdev/icecream-sundae)
+is a good alternative.
+
 
 Screenshot
 ----------
