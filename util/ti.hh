@@ -98,12 +98,13 @@ public:
     void unbind();
 
 private:
-    event_binding_base(T& object, int event_id, int unbind_event_id)
-        : m_object(object), m_event_id(event_id), m_unbind_event_id(unbind_event_id) { }
+    event_binding_base(T& object, int event_id)
+        : m_object(object), m_event_id(event_id)
+    {
+    }
 
     T&  m_object;
     int m_event_id;
-    int m_unbind_event_id;
 
     template <typename H> friend struct event_handler;
 };

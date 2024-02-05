@@ -53,30 +53,32 @@ void render_buffer::track_delete(TickitRenderBuffer* ptr)
 /*
  * Map object types to their Tickit event callback types.
  */
-template <typename T> struct emitter_callback_map { };
-#define TI_EMITTER_CALLBACK(emitter_name, callback_name) \
-    template <> struct emitter_callback_map<emitter_name> { using type = callback_name; }
+template <typename T> struct emitter_map { };
+#define TI_EMITTER_MAP(emitter_name, event_name)   \
+    template <> struct emitter_map<emitter_name> { \
+        using event = event_name;                  \
+        using type = event_name ## Fn ;            \
+    }
 
-TI_EMITTER_CALLBACK(window, TickitWindowEventFn);
-TI_EMITTER_CALLBACK(terminal, TickitTermEventFn);
+TI_EMITTER_MAP(window, TickitWindowEvent);
+TI_EMITTER_MAP(terminal, TickitTermEvent);
 
 
 /*
  * Map event types to their Tickit "event info" struct types.
  */
 template <typename T> struct event_info_map {
-    static const TickitEventType code;
 };
 
-#define TI_EVENT_INFO(event_name, event_code, info_name) \
-    template <> struct event_info_map<event_name> {      \
-        static const TickitEventType code = event_code;  \
-        using type = info_name; \
+#define TI_EVENT_INFO(emitter_type, event_name, event_code, info_name) \
+    template <> struct event_info_map<emitter_type::event_name> {      \
+        using type = info_name;                                        \
+        using EventType = typename emitter_map<emitter_type>::event;   \
+        static constexpr EventType code = event_code;                  \
     }
 
-TI_EVENT_INFO(window::expose_event,          TICKIT_EV_EXPOSE,     TickitExposeEventInfo);
-TI_EVENT_INFO(window::geometry_change_event, TICKIT_EV_GEOMCHANGE, TickitGeomchangeEventInfo);
-
+TI_EVENT_INFO(window, expose_event,          TICKIT_WINDOW_ON_EXPOSE,     TickitExposeEventInfo);
+TI_EVENT_INFO(window, geometry_change_event, TICKIT_WINDOW_ON_GEOMCHANGE, TickitGeomchangeEventInfo);
 
 
 struct debug_init {
@@ -470,10 +472,10 @@ uint window::columns() const { return i2u(tickit_window_cols(unwrap())); }
 template <typename T>
 struct emitter_traits {
     using tickit_emitter_type = typename T::tickit_type;
-    using tickit_callback_type = typename emitter_callback_map<T>::type;
+    using tickit_callback_type = typename emitter_map<T>::type;
 
     using tickit_bind_function_type = int (* const)(tickit_emitter_type*,
-                                                    TickitEventType,
+                                                    TickitWindowEvent,
                                                     TickitBindFlags,
                                                     tickit_callback_type,
                                                     void*);
@@ -484,18 +486,18 @@ struct emitter_traits {
     static const tickit_unbind_function_type tickit_unbind;
 
     static inline int
-    bind(T& emitter, TickitEventType ev, tickit_callback_type callback, void* handler_info) {
+    bind(T& emitter, TickitWindowEvent ev, tickit_callback_type callback, void* handler_info) {
         return tickit_bind(emitter.unwrap(), ev, static_cast<TickitBindFlags>(0), callback, handler_info);
     }
 };
 
-#define EMITTER_BIND_FUNCS(emitter_name, bind_func, unbind_func) \
+#define EMITTER_BIND_FUNCS(emitter_name) \
     template <> emitter_traits<emitter_name>::tickit_bind_function_type \
-        emitter_traits<emitter_name>::tickit_bind = bind_func; \
+        emitter_traits<emitter_name>::tickit_bind = tickit_ ## emitter_name ## _bind_event; \
     template <> emitter_traits<emitter_name>::tickit_unbind_function_type \
-        emitter_traits<emitter_name>::tickit_unbind = unbind_func
+        emitter_traits<emitter_name>::tickit_unbind = tickit_ ## emitter_name ## _unbind_event_id
 
-EMITTER_BIND_FUNCS(window, tickit_window_bind_event, tickit_window_unbind_event_id);
+EMITTER_BIND_FUNCS(window);
 
 
 template <typename E>
@@ -503,13 +505,12 @@ struct event_handler {
     using event_type             = E;
     using emitter_type           = typename event_type::emitter_type;
     using tickit_emitter_type    = typename emitter_type::tickit_type;
-    using tickit_callback_type   = typename emitter_callback_map<emitter_type>::type;
+    using tickit_callback_type   = typename emitter_map<emitter_type>::type;
     using tickit_event_info_type = typename event_info_map<event_type>::type;
 
     event_binding_base<emitter_type> bind(emitter_type& emitter) {
         return {
             emitter,
-            emitter_traits<emitter_type>::bind(emitter, TICKIT_EV_UNBIND, unbind_callback, this),
             emitter_traits<emitter_type>::bind(emitter, event_info_map<event_type>::code, callback, this)
         };
     }
@@ -530,15 +531,14 @@ struct event_handler {
         return handle(event);
     }
 
-    static int callback(tickit_emitter_type* e, TickitEventType ev, void* info, void* user) {
+    static int callback(tickit_emitter_type* e, TickitEventFlags flags, void* info, void* user) {
         auto handler = reinterpret_cast<event_handler<event_type>*>(user);
-        return handler->run(e, reinterpret_cast<tickit_event_info_type*>(info)) ? 1 : 0;
-    }
-
-    static int unbind_callback(tickit_emitter_type* e, TickitEventType ev, void* info, void* user) {
-        assert(ev & TICKIT_EV_UNBIND);
-        delete reinterpret_cast<event_handler<event_type>*>(user);
-        return 1;
+        if (flags & TICKIT_EV_UNBIND) {
+            delete handler;
+            return 1;
+        } else {
+            return handler->run(e, reinterpret_cast<tickit_event_info_type*>(info)) ? 1 : 0;
+        }
     }
 
     typename event_type::functor_type handle;
