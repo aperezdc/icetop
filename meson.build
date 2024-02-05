@@ -2,12 +2,20 @@ project('icetop', 'cpp',
 	version: '0.1',
 	license: 'GPL3')
 
-libdill = dependency('libdill', required: true, version: '>= 1.0')
-icecc   = dependency('icecc',   required: true, version: '>= 1.0')
-tickit  = dependency('tickit',  required: true)
+cpp = meson.get_compiler('cpp')
+
+tickit = dependency('tickit',  required: true)
+icecc = dependency('icecc',   required: true, version: '>= 1.0')
+
+libdill = dependency('libdill', required: false, version: '>= 1.0')
+if not libdill.found()
+  libdill = cpp.find_library('dill',
+    has_headers: 'libdill.h',
+    required: true,
+  )
+endif
 
 cpp_args = []
-cpp = meson.get_compiler('cpp')
 if cpp.has_argument('-Wall')
   cpp_args += ['-Wall']
 endif
