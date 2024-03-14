@@ -200,14 +200,14 @@ public:
             scheduler = nullptr;
         }
 
-        auto deadline = now() + 3000;
+        static constexpr auto max_wait_seconds = 3;
         while (!scheduler) {
             for (auto& name: s_opt_netnames) {
-                auto discover = std::make_unique<DiscoverSched>(name);
+                auto discover = std::make_unique<DiscoverSched>(name, max_wait_seconds);
                 scheduler.reset(discover->try_get_scheduler());
                 while (!scheduler && !discover->timed_out()) {
                     if (discover->listen_fd() != -1) {
-                        if (fdin(discover->listen_fd(), deadline)) {
+                        if (fdin(discover->listen_fd(), now() + 100) && (errno != ETIMEDOUT)) {
                             perror("fdin");
                             exit(EXIT_FAILURE);
                         }
