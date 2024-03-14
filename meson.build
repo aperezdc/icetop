@@ -7,7 +7,7 @@ cpp = meson.get_compiler('cpp')
 tickit = dependency('tickit',  required: true)
 icecc = dependency('icecc',   required: true, version: '>= 1.0')
 
-libdill = dependency('libdill', required: false, version: '>= 1.0')
+libdill = dependency('libdill', required: false, version: '>= 1.0', modules: 'libdill::dill')
 if not libdill.found()
   libdill = cpp.find_library('dill',
     has_headers: 'libdill.h',
