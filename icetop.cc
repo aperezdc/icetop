@@ -12,17 +12,17 @@ extern "C" {
 #include <libdill.h>
 }
 
-#include <errno.h>
 #include <icecc/comm.h>
 
-#include <algorithm>
 #include <cstdio>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 
+static std::vector<std::string> s_opt_netnames;
 
 using host_stats_map = std::unordered_map<std::string, std::string>;
 
@@ -184,22 +184,25 @@ public:
 
 
     coroutine void check_scheduler(bool deleteit=false) {
-        auto deadline = now() + 3000;  // Allow up to three seconds.
+        if (auto env_scheduler = util::getenv("USE_SCHEDULER")) {
+            s_opt_netnames.push_back(env_scheduler.value());
+        }
+        if (auto env_scheduler = util::getenv("ICECREAM_SCHEDULER")) {
+            s_opt_netnames.push_back(env_scheduler.value());
+        }
+        if (!network_name.empty()) {
+            s_opt_netnames.push_back(network_name);
+        } else {
+            s_opt_netnames.push_back("ICECREAM");
+        }
+
         if (deleteit) {
             scheduler = nullptr;
         }
-        while (!scheduler) {
-            std::vector<std::string> names;
-            if (!network_name.empty()) {
-                names.push_back(network_name);
-            } else {
-                names.push_back("ICECREAM");
-            }
-            if (auto env_scheduler = util::getenv("USE_SCHEDULER")) {
-                names.push_back(env_scheduler.value());
-            }
 
-            for (auto name: names) {
+        auto deadline = now() + 3000;
+        while (!scheduler) {
+            for (auto& name: s_opt_netnames) {
                 auto discover = std::make_unique<DiscoverSched>(name);
                 scheduler.reset(discover->try_get_scheduler());
                 while (!scheduler && !discover->timed_out()) {
@@ -592,6 +595,18 @@ int main(int argc, char **argv)
 {
     ti::terminal term { };
     term.wait_ready();
+
+    int opt;
+    while ((opt = getopt(argc, argv, "hn:")) != -1) {
+        switch (opt) {
+        case 'n':
+            s_opt_netnames.emplace_back(optarg);
+            break;
+        default:
+            term << "Usage: " << argv[0] <<  " [-h] [-n netname]\n";
+            return (opt == 'h') ? EXIT_SUCCESS : EXIT_FAILURE;
+        }
+    }
 
     screen_layout layout { term };
 
