@@ -216,6 +216,7 @@ public:
                     }
                     scheduler.reset(discover->try_get_scheduler());
                 }
+                fdclean(discover->listen_fd());
                 if (scheduler) {
                     state = ONLINE;
                     network_name = discover->networkName();
@@ -238,6 +239,7 @@ public:
             }
             while (!scheduler->read_a_bit() || scheduler->has_msg()) {
                 if (!_handle_activity()) {
+                    fdclean(scheduler->fd);
                     break;
                 }
             }
